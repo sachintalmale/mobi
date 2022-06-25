@@ -21,13 +21,16 @@ exports.createFile = async (req, res) => {
     var uniqueNumber = Math.floor(100000 + Math.random() * 900000);
 
     const files = req.files;
+
+    console.log(req.files)
     
     let fileData ;
     for (const file of files) {
         const newPath = await fileUpload(file);
-
+        const id = uuidv4();
+        console.log(id)
         fileData = {
-            id:uuidv4(),
+            id,
             password: uniqueNumber,
             cloudinary_id: newPath.public_id,
             url: newPath.secure_url,
@@ -126,5 +129,66 @@ exports.showFiles = async(req,res)=>{
             message: "Something wrong",
             data: {},
         });
+    }
+}
+
+exports.download = async(req,res)=>{
+    try{
+        const {id,password}=req.body;
+
+        if (!id || !password) {
+
+            return res.status(400).json({
+                code: 400,
+                status: "Failed",
+                message: "fill required details",
+                data: {},
+            });
+
+        }
+
+        
+        var checkPassword=false,fileCheck=false;
+        var userData = await User.findOne({username:req.user})
+        userData = userData.files;
+        var response
+        for (value of userData){
+            if(id == value.id){
+                fileCheck=true;
+                if(password== value.password){
+                 checkPassword = true;
+                    response = {
+                        fileId : value.id,
+                        fileUrl:value.url
+                    }
+                }
+            }
+        }
+        if(fileCheck==false){
+            return res.status(400).json({
+                code: 400,
+                status: "Failed",
+                message: "file not found",
+                data: {},
+            });
+        }else if(checkPassword==false){
+            
+                return res.status(400).json({
+                    code: 400,
+                    status: "Failed",
+                    message: "Enter correct password",
+                    data: {},
+                });
+            
+        }
+
+        return res.status(200).json({
+            code: 200,
+            status: "OK",
+            message: "Successful",
+            data: {response}
+        });
+    }catch(err){
+        console.log("download error:",err)
     }
 }
